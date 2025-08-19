@@ -28,7 +28,7 @@ public:
             transform = other.transform ? new MyTransform(*other.transform) : nullptr;
         }
         return *this;
-    }
+    }//hhahahahahah
 
     MyTransform* getTransform() const {
         return transform;
