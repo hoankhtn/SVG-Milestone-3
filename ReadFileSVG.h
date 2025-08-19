@@ -3,6 +3,7 @@
 #include "Point2D.h"
 #include "PathCommand.h"
 #include "Group.h"
+#include "Gradient.h"
 class ReadFileSVG
 {
 private:
@@ -27,6 +28,8 @@ public:
 	Shape* parseText(xml_node<>*);
 	Shape* parseGroup(xml_node<>*);
 	MyTransform* parseTransform(xml_node<>*);
+	Gradient* parseLinearGradient(xml_node<>* node);
+	Gradient* parseRadialGradient(xml_node<>* node);
 	~ReadFileSVG();
 };
 

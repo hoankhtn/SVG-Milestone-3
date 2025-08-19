@@ -641,4 +641,56 @@ MyTransform* ReadFileSVG::parseTransform(xml_node<>* node) {
     return tf;
 }
 
+Gradient* ReadFileSVG::parseLinearGradient(xml_node<>* node) {
+    string id;
+    if (xml_attribute<>* attr = node->first_attribute("id"))
+        id = attr->value();
+
+    Gradient* grad = new Gradient(id, "linear");
+
+    if (xml_attribute<>* a = node->first_attribute("x1")) grad->x1 = atof(a->value());
+    if (xml_attribute<>* a = node->first_attribute("y1")) grad->y1 = atof(a->value());
+    if (xml_attribute<>* a = node->first_attribute("x2")) grad->x2 = atof(a->value());
+    if (xml_attribute<>* a = node->first_attribute("y2")) grad->y2 = atof(a->value());
+
+    for (xml_node<>* stop = node->first_node("stop"); stop; stop = stop->next_sibling("stop")) {
+        GradientStop s;
+        if (xml_attribute<>* a = stop->first_attribute("offset"))
+            s.offset = atof(a->value());
+        if (xml_attribute<>* a = stop->first_attribute("stop-color"))
+            s.color = a->value();
+        if (xml_attribute<>* a = stop->first_attribute("stop-opacity"))
+            s.opacity = atof(a->value());
+        grad->stops.push_back(s);
+    }
+
+    return grad;
+}
+
+
+Gradient* ReadFileSVG::parseRadialGradient(xml_node<>* node) {
+    string id;
+    if (xml_attribute<>* attr = node->first_attribute("id"))
+        id = attr->value();
+
+    Gradient* grad = new Gradient(id, "radial");
+
+    if (xml_attribute<>* a = node->first_attribute("cx")) grad->cx = atof(a->value());
+    if (xml_attribute<>* a = node->first_attribute("cy")) grad->cy = atof(a->value());
+    if (xml_attribute<>* a = node->first_attribute("r"))  grad->r = atof(a->value());
+
+    for (xml_node<>* stop = node->first_node("stop"); stop; stop = stop->next_sibling("stop")) {
+        GradientStop s;
+        if (xml_attribute<>* a = stop->first_attribute("offset"))
+            s.offset = atof(a->value());
+        if (xml_attribute<>* a = stop->first_attribute("stop-color"))
+            s.color = a->value();
+        if (xml_attribute<>* a = stop->first_attribute("stop-opacity"))
+            s.opacity = atof(a->value());
+        grad->stops.push_back(s);
+    }
+
+    return grad;
+}
+
 ReadFileSVG::~ReadFileSVG() {}
