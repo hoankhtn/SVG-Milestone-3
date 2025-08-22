@@ -310,12 +310,11 @@ vector <string> ReadFileSVG::splitPathCommands(const string& input) {
 
 vector<PathCommand*> ReadFileSVG::parseCommands(const vector<string>& input) {
     vector<PathCommand*> commands;
-
     if (input.empty()) return commands;
 
-    string temp = input[0];
-    vector<float> nums = parseNumbers(temp.substr(1));
-    Point2D startPoint(nums[0], nums[1]);
+    Point2D current(0.0f, 0.0f);
+    Point2D subStart(0.0f, 0.0f);
+    char prevCmd = 0;
 
     for (const string& cmdStr : input) {
         char cmd = cmdStr[0];
@@ -324,100 +323,131 @@ vector<PathCommand*> ReadFileSVG::parseCommands(const vector<string>& input) {
 
         switch (cmd) {
         case 'M':
-        case 'm':
+        case 'm': {
             if (numbers.size() >= 2) {
                 commands.push_back(new MoveToCommand(numbers[0], numbers[1], isRelative));
+                if (isRelative) current.setPoint2D(current.getPointX() + numbers[0], current.getPointY() + numbers[1]);
+                else            current.setPoint2D(numbers[0], numbers[1]);
+                subStart = current;
+                prevCmd = isRelative ? 'm' : 'M';
 
-                if (!isRelative) {
-                    startPoint = Point2D(numbers[0], numbers[1]);
+                for (size_t i = 2; i + 1 < numbers.size(); i += 2) {
+                    commands.push_back(new LineToCommand(numbers[i], numbers[i + 1], isRelative));
+                    if (isRelative) current.setPoint2D(current.getPointX() + numbers[i], current.getPointY() + numbers[i + 1]);
+                    else            current.setPoint2D(numbers[i], numbers[i + 1]);
+                    prevCmd = isRelative ? 'l' : 'L';
                 }
             }
             break;
-
+        }
         case 'L':
-        case 'l':
-            if (numbers.size() >= 2) {
-                commands.push_back(new LineToCommand(numbers[0], numbers[1], isRelative));
+        case 'l': {
+            for (size_t i = 0; i + 1 < numbers.size(); i += 2) {
+                commands.push_back(new LineToCommand(numbers[i], numbers[i + 1], isRelative));
+                if (isRelative) current.setPoint2D(current.getPointX() + numbers[i], current.getPointY() + numbers[i + 1]);
+                else            current.setPoint2D(numbers[i], numbers[i + 1]);
+                prevCmd = isRelative ? 'l' : 'L';
             }
             break;
-
+        }
         case 'H':
-        case 'h':
-            if (!numbers.empty()) {
-                commands.push_back(new HorizontalLineToCommand(numbers[0], 0.0f, isRelative));
+        case 'h': {
+            for (size_t i = 0; i < numbers.size(); ++i) {
+                commands.push_back(new HorizontalLineToCommand(numbers[i], 0.0f, isRelative));
+                float newX = isRelative ? current.getPointX() + numbers[i] : numbers[i];
+                current.setPoint2D(newX, current.getPointY());
+                prevCmd = isRelative ? 'h' : 'H';
             }
             break;
-
+        }
         case 'V':
-        case 'v':
-            if (!numbers.empty()) {
-                commands.push_back(new VerticalLineToCommand(0.0f, numbers[0], isRelative));
+        case 'v': {
+            for (size_t i = 0; i < numbers.size(); ++i) {
+                commands.push_back(new VerticalLineToCommand(0.0f, numbers[i], isRelative));
+                float newY = isRelative ? current.getPointY() + numbers[i] : numbers[i];
+                current.setPoint2D(current.getPointX(), newY);
+                prevCmd = isRelative ? 'v' : 'V';
             }
             break;
-
+        }
         case 'C':
-        case 'c':
-            if (numbers.size() >= 6) {
+        case 'c': {
+            for (size_t i = 0; i + 5 < numbers.size(); i += 6) {
                 commands.push_back(new CurvetoCommand(
-                    numbers[0], numbers[1],
-                    numbers[2], numbers[3],
-                    numbers[4], numbers[5],
-                    isRelative
-                ));
+                    numbers[i], numbers[i + 1],
+                    numbers[i + 2], numbers[i + 3],
+                    numbers[i + 4], numbers[i + 5],
+                    isRelative));
+                float endX = isRelative ? current.getPointX() + numbers[i + 4] : numbers[i + 4];
+                float endY = isRelative ? current.getPointY() + numbers[i + 5] : numbers[i + 5];
+                current.setPoint2D(endX, endY);
+                prevCmd = isRelative ? 'c' : 'C';
             }
             break;
-
+        }
         case 'S':
-        case 's':
-            if (numbers.size() >= 4) {
+        case 's': {
+            for (size_t i = 0; i + 3 < numbers.size(); i += 4) {
                 commands.push_back(new SmoothCurvetoCommand(
-                    numbers[0], numbers[1],
-                    numbers[2], numbers[3],
-                    isRelative
-                ));
+                    numbers[i], numbers[i + 1],
+                    numbers[i + 2], numbers[i + 3],
+                    isRelative));
+                float endX = isRelative ? current.getPointX() + numbers[i + 2] : numbers[i + 2];
+                float endY = isRelative ? current.getPointY() + numbers[i + 3] : numbers[i + 3];
+                current.setPoint2D(endX, endY);
+                prevCmd = isRelative ? 's' : 'S';
             }
             break;
-
+        }
         case 'Q':
-        case 'q':
-            if (numbers.size() >= 4) {
+        case 'q': {
+            for (size_t i = 0; i + 3 < numbers.size(); i += 4) {
                 commands.push_back(new QuadraticBezierCommand(
-                    numbers[0], numbers[1],
-                    numbers[2], numbers[3],
-                    isRelative
-                ));
+                    numbers[i], numbers[i + 1],
+                    numbers[i + 2], numbers[i + 3],
+                    isRelative));
+                float endX = isRelative ? current.getPointX() + numbers[i + 2] : numbers[i + 2];
+                float endY = isRelative ? current.getPointY() + numbers[i + 3] : numbers[i + 3];
+                current.setPoint2D(endX, endY);
+                prevCmd = isRelative ? 'q' : 'Q';
             }
             break;
-
+        }
         case 'T':
-        case 't':
-            if (numbers.size() >= 2) {
-                commands.push_back(new SmoothQuadraticCommand(
-                    numbers[0], numbers[1],
-                    isRelative
-                ));
+        case 't': {
+            for (size_t i = 0; i + 1 < numbers.size(); i += 2) {
+                commands.push_back(new SmoothQuadraticCommand(numbers[i], numbers[i + 1], isRelative));
+                float endX = isRelative ? current.getPointX() + numbers[i] : numbers[i];
+                float endY = isRelative ? current.getPointY() + numbers[i + 1] : numbers[i + 1];
+                current.setPoint2D(endX, endY);
+                prevCmd = isRelative ? 't' : 'T';
             }
             break;
-
+        }
         case 'A':
-        case 'a':
-            if (numbers.size() >= 7) {
-                bool largeArc = numbers[3] != 0;
-                bool sweep = numbers[4] != 0;
+        case 'a': {
+            for (size_t i = 0; i + 6 < numbers.size(); i += 7) {
+                bool largeArc = numbers[i + 3] != 0;
+                bool sweep = numbers[i + 4] != 0;
                 commands.push_back(new EllipticalArcCommand(
-                    numbers[0], numbers[1],         
-                    numbers[2],                     
+                    numbers[i], numbers[i + 1], numbers[i + 2],
                     largeArc, sweep,
-                    numbers[5], numbers[6],
-                    isRelative
-                ));
+                    numbers[i + 5], numbers[i + 6],
+                    isRelative));
+                float endX = isRelative ? current.getPointX() + numbers[i + 5] : numbers[i + 5];
+                float endY = isRelative ? current.getPointY() + numbers[i + 6] : numbers[i + 6];
+                current.setPoint2D(endX, endY);
+                prevCmd = isRelative ? 'a' : 'A';
             }
             break;
-
+        }
         case 'Z':
-        case 'z':
-            commands.push_back(new ClosePathCommand(startPoint));
+        case 'z': {
+            commands.push_back(new ClosePathCommand(subStart));
+            current = subStart;
+            prevCmd = (cmd == 'z') ? 'z' : 'Z';
             break;
+        }
         }
     }
 
@@ -694,3 +724,4 @@ Gradient* ReadFileSVG::parseRadialGradient(xml_node<>* node) {
 }
 
 ReadFileSVG::~ReadFileSVG() {}
+
